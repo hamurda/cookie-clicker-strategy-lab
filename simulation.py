@@ -42,7 +42,7 @@ def run_simulation(strategy: Strategy, ticks=1000):
         cookies += cps
         total_baked += cps
 
-        state = GameState(cookies, owned, tier_upgrades, grandma_synergy, cps, total_baked)
+        state = GameState(cookies, owned, tier_upgrades, grandma_synergy, cps)
         action = strategy.decide(state)
         if action:
             cookies -= action.cost
