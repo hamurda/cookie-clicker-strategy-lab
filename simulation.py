@@ -41,9 +41,10 @@ def building_cost(base_cost, owned):
     return math.ceil(base_cost * (1.15 ** owned))
 
 
-def compute_cps(owned, tier_upgrades, grandma_synergy):
+def compute_building_cps(owned, tier_upgrades, grandma_synergy):
     num_grandmas = owned[1]
     synergy_count = len(grandma_synergy)
+    contribs = [0.0] * len(BUILDINGS)
     total = 0.0
 
     for i, (_, _, base_cps) in enumerate(BUILDINGS):
@@ -57,9 +58,10 @@ def compute_cps(owned, tier_upgrades, grandma_synergy):
             eff = base_cps * tier_mult * grandma_bonus
         else:
             eff = base_cps * tier_mult
+        contribs[i] = owned[i] * eff
         total += owned[i] * eff
 
-    return total
+    return contribs, total
 
 
 def available_upgrades(owned, tier_upgrades, grandma_synergy):
@@ -93,6 +95,29 @@ def greedy_cheapest(cookies, owned, tier_upgrades, grandma_synergy):
             return (otype, idx, cost)
     return None
 
+def print_report(time_series, owned, tier_upgrades, grandma_synergy, total_baked, purchase_ticks):
+    print("\n--- Time Series (every 100 ticks) ---")
+    print(f"{'Tick':>6} | {'CpS':>12} | {'Bank':>14} | {'Total Baked':>16}")
+    print("-" * 58)
+    for entry in time_series:
+        print(f"{entry['tick']:>6} | {entry['cps']:>12.2f} | {entry['bank']:>14.2f} | {entry['total_baked']:>16.0f}")
+
+    contribs, final_cps = compute_building_cps(owned, tier_upgrades, grandma_synergy)
+    upgrades_bought = sum(tier_upgrades) + len(grandma_synergy)
+    total_purchases = len(purchase_ticks)
+    avg_gap = (purchase_ticks[-1] - purchase_ticks[0]) / (total_purchases - 1) if total_purchases > 1 else 0.0
+
+    print("\n--- End-of-Run Summary ---")
+    print(f"Final CpS:          {final_cps:>16.2f}")
+    print(f"Total cookies baked:{total_baked:>16.0f}")
+    print(f"Total purchases:    {total_purchases:>16}")
+    print(f"Upgrades purchased: {upgrades_bought:>16}")
+    print(f"Avg ticks between purchases: {avg_gap:>8.1f}")
+    print("\nBuildings owned & CpS share:")
+    for i, (name, _, _) in enumerate(BUILDINGS):
+        pct = (contribs[i] / final_cps * 100) if final_cps > 0 else 0.0
+        print(f"  {name:<14} owned: {owned[i]:>4}   CpS share: {pct:>5.1f}%")
+
 
 def run_simulation(ticks=1000):
     owned = [0] * 10
@@ -102,9 +127,11 @@ def run_simulation(ticks=1000):
 
     cookies = 0.0
     total_baked = 0.0
+    time_series = []
+    purchase_ticks = []
 
     for tick in range(1, ticks + 1):
-        cps = compute_cps(owned, tier_upgrades, grandma_synergy)
+        _, cps = compute_building_cps(owned, tier_upgrades, grandma_synergy)
         cookies += cps
         total_baked += cps
 
@@ -118,10 +145,18 @@ def run_simulation(ticks=1000):
                 tier_upgrades[idx] += 1
             elif otype == "grandma_synergy":
                 grandma_synergy[idx] = True
+            purchase_ticks.append(tick)
 
         if tick % 100 == 0:
-            cps = compute_cps(owned, tier_upgrades, grandma_synergy)
-            print(f"Tick {tick:5d} | CpS: {cps:>12.2f} | Total baked: {total_baked:>16.0f}")
+            time_series.append({
+                "tick": tick,
+                "cps": compute_building_cps(owned, tier_upgrades, grandma_synergy)[1],
+                "bank": cookies,
+                "total_baked": total_baked,
+            })
+
+    print_report(time_series, owned, tier_upgrades, grandma_synergy, total_baked, purchase_ticks)
+
 
 if __name__ == "__main__":
-    run_simulation(1000)
+    run_simulation(10000)
