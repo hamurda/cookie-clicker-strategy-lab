@@ -20,7 +20,7 @@ Always buys the cheapest available thing (building or upgrade) that you can curr
 ---
 
 ## Phase 2: Strategy Interface + Greedy Algorithm
-**Goal:** Extract the decision-making into a clean interface. Implement the time-to-ROI strategy. Run both strategies and compare.
+**Goal:** Extract the decision-making into a clean interface. Implement the time-to-ROI strategy. At the end of Phase 2. the project should have the strategy, game-state and action abstracted. And the second strategy - greedy time-to-ROI should be implemented. 
 
 ### Strategy: Greedy Time-to-ROI (Algorithmic)
  
