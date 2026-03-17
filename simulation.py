@@ -1,8 +1,8 @@
 from engine import BUILDINGS, GameState, compute_building_cps
-from strategies import CheapestStrategy, Strategy, GreedyROIStrategy
+from strategies import CheapestStrategy, GreedyROIStrategy, LLMStrategy, Strategy
 
 
-def print_report(time_series, owned, tier_upgrades, grandma_synergy, total_baked, purchase_ticks):
+def print_report(time_series, owned, tier_upgrades, grandma_synergy, total_baked, purchase_ticks, llm_calls=None):
     print("\n--- Time Series (every 100 ticks) ---")
     print(f"{'Tick':>6} | {'CpS':>12} | {'Bank':>14} | {'Total Baked':>16}")
     print("-" * 58)
@@ -20,6 +20,8 @@ def print_report(time_series, owned, tier_upgrades, grandma_synergy, total_baked
     print(f"Total purchases:    {total_purchases:>16}")
     print(f"Upgrades purchased: {upgrades_bought:>16}")
     print(f"Avg ticks between purchases: {avg_gap:>8.1f}")
+    if llm_calls is not None:
+        print(f"LLM calls:          {llm_calls:>16}")
     print("\nBuildings owned & CpS share:")
     for i, (name, _, _) in enumerate(BUILDINGS):
         pct = (contribs[i] / final_cps * 100) if final_cps > 0 else 0.0
@@ -62,8 +64,9 @@ def run_simulation(strategy: Strategy, ticks=1000):
                 "total_baked": total_baked,
             })
 
-    print_report(time_series, owned, tier_upgrades, grandma_synergy, total_baked, purchase_ticks)
+    llm_calls = getattr(strategy, "llm_calls", None)
+    print_report(time_series, owned, tier_upgrades, grandma_synergy, total_baked, purchase_ticks, llm_calls)
 
 
 if __name__ == "__main__":
-    run_simulation(GreedyROIStrategy(), 1000)
+    run_simulation(LLMStrategy(), 1000)
