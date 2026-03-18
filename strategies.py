@@ -35,17 +35,17 @@ class Strategy(ABC):
 
 class CheapestStrategy(Strategy):
     def decide(self, state: GameState) -> Action | None:
-        options = [(building_cost(bc, state.owned[i]), "building", i) for i, (_, bc, _) in enumerate(BUILDINGS)]
-        options += [(cost, utype, idx) 
-            for cost, utype, idx, _ in available_upgrades(
+        options = [(building_cost(bc, state.owned[i]), "building", i, name) for i, (name, bc, _) in enumerate(BUILDINGS)]
+        options += [(cost, utype, idx, uname)
+            for cost, utype, idx, uname in available_upgrades(
                 state.owned, state.tier_upgrades, state.grandma_synergy
             )
         ]
         options.sort(key=lambda x: x[0])
 
-        for cost, otype, idx in options:
+        for cost, otype, idx, name in options:
             if state.cookies >= cost:
-                return Action(otype, idx, cost)
+                return Action(otype, idx, cost, name)
         return None
 
 
@@ -56,16 +56,16 @@ class GreedyROIStrategy(Strategy):
 
         candidates = []
 
-        for i, (_, bc, _) in enumerate(BUILDINGS):
+        for i, (name, bc, _) in enumerate(BUILDINGS):
             cost = building_cost(bc, state.owned[i])
-            action = Action("building", i, cost)
+            action = Action("building", i, cost, name)
             delta = _cps_delta(state, action)
             if delta > 0:
                 payback = max(0, (cost - state.cookies) / state.cps) + cost / delta #time to afford + time to ROI
                 candidates.append((payback, action))
 
-        for cost, utype, idx, _ in available_upgrades(state.owned, state.tier_upgrades, state.grandma_synergy):
-            action = Action(utype, idx, cost)
+        for cost, utype, idx, uname in available_upgrades(state.owned, state.tier_upgrades, state.grandma_synergy):
+            action = Action(utype, idx, cost, uname)
             delta = _cps_delta(state, action)
             if delta > 0:
                 payback = max(0, (cost - state.cookies) / state.cps) + cost / delta
@@ -148,7 +148,7 @@ class LLMStrategy(Strategy):
         for i, (name, bc, _) in enumerate(BUILDINGS):
             cost = building_cost(bc, state.owned[i])
             if cost <= state.cps * 500:
-                result[name] = Action("building", i, cost)
+                result[name] = Action("building", i, cost, name)
 
         # add the cheapest unaffordable building as a stretch goal
         stretch = min(
@@ -161,11 +161,11 @@ class LLMStrategy(Strategy):
 
         if stretch:
             cost, name, i = stretch
-            result[name] = Action("building", i, cost)
+            result[name] = Action("building", i, cost, name)
 
-        upgrades = available_upgrades(state.owned, state.tier_upgrades, state.grandma_synergy)                                                                                                
+        upgrades = available_upgrades(state.owned, state.tier_upgrades, state.grandma_synergy)
 
-        # add the cheapest unaffordable upgrade as a stretch goal                                                                                                                                                             
+        # add the cheapest unaffordable upgrade as a stretch goal
         ustretch = min(
             ((c, ut, idx, un) for c, ut, idx, un in upgrades if c > state.cps * 500),
             key=lambda x: x[0],
@@ -173,7 +173,7 @@ class LLMStrategy(Strategy):
         )
         if ustretch:
             cost, utype, idx, uname = ustretch
-            result[uname] = Action(utype, idx, cost)
+            result[uname] = Action(utype, idx, cost, uname)
 
         return result
 

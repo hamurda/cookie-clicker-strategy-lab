@@ -1,5 +1,6 @@
 .claude/
 .venv/
 .env
+*.json
 
 __pycache__/
