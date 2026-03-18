@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Literal
+from unittest import result
 from dotenv import load_dotenv
 
 from openai import OpenAI
@@ -85,18 +86,18 @@ class _LLMDecision(BaseModel):
 
 class LLMStrategy(Strategy):
     MODEL = "gpt-5-mini"
-    load_dotenv()
-
-    def __init__(self):
-        self._client = OpenAI()
+    
+    def __init__(self, sim_length=1000):
         self._tick = 0
         self._pending_buy: Action | None = None  # LLM said buy this; execute when affordable
         self._wait_until: int = -1               # tick at which wait expires (-1 = no timer)
         self._wait_for: str | None = None        # item name to auto-buy when affordable
+        self._wait_for_since: int = 0            # tick when _wait_for was set
         self.llm_calls: int = 0
+        self.sim_length = sim_length
 
-    def _has_direction(self) -> bool:
-        return self._pending_buy is not None or self._wait_for is not None or self._wait_until >= 0
+        load_dotenv()
+        self._client = OpenAI()
 
     def decide(self, state: GameState) -> Action | None:
         self._tick += 1
@@ -110,28 +111,29 @@ class LLMStrategy(Strategy):
             self._wait_for = None
             return action
 
-        # Complete a pending buy direction once affordable
-        if self._pending_buy and state.cookies >= self._pending_buy.cost:
-            action = self._pending_buy
-            self._pending_buy = None
-            return action
-
         # Respect active wait_until — no interruption
         if self._wait_until >= 0:
             if self._tick < self._wait_until:
                 return None
             self._wait_until = -1  # timer expired, fall through to consult LLM
 
-        # Respect active wait_for — still saving up, no interruption
+        # Respect active wait_for — still saving up, unless timeout exceeded
         if self._wait_for:
-            return None
+            action = all_options.get(self._wait_for)
+            if action and state.cps > 0:
+                timeout = 3 * (action.cost / state.cps)
+                if self._tick - self._wait_for_since <= timeout:
+                    return None
+            else:
+                return None
+            self._wait_for = None  # timeout exceeded, fall through to re-consult LLM
 
         # No direction from LLM; consult if something is affordable
         if not affordable:
             return None
 
-        decision = self._call_llm(state, all_options)
-        self._apply(decision, affordable, all_options)
+        decision, options_list = self._call_llm(state, all_options)
+        self._apply(decision, affordable, options_list)
 
         # If the decision is immediately actionable, execute now
         if self._pending_buy and state.cookies >= self._pending_buy.cost:
@@ -140,37 +142,74 @@ class LLMStrategy(Strategy):
             return action
 
         return None
-
+    
     def _all_options(self, state: GameState) -> dict[str, Action]:
         result = {}
         for i, (name, bc, _) in enumerate(BUILDINGS):
-            result[name] = Action("building", i, building_cost(bc, state.owned[i]))
-        for cost, utype, idx, uname in available_upgrades(state.owned, state.tier_upgrades, state.grandma_synergy):
+            cost = building_cost(bc, state.owned[i])
+            if cost <= state.cps * 500:
+                result[name] = Action("building", i, cost)
+
+        # add the cheapest unaffordable building as a stretch goal
+        stretch = min(
+            ((building_cost(bc, state.owned[i]), name, i)
+             for i, (name, bc, _) in enumerate(BUILDINGS)
+             if name not in result),
+            key=lambda x: x[0],
+            default=None,
+        )
+
+        if stretch:
+            cost, name, i = stretch
+            result[name] = Action("building", i, cost)
+
+        upgrades = available_upgrades(state.owned, state.tier_upgrades, state.grandma_synergy)                                                                                                
+
+        # add the cheapest unaffordable upgrade as a stretch goal                                                                                                                                                             
+        ustretch = min(
+            ((c, ut, idx, un) for c, ut, idx, un in upgrades if c > state.cps * 500),
+            key=lambda x: x[0],
+            default=None,
+        )
+        if ustretch:
+            cost, utype, idx, uname = ustretch
             result[uname] = Action(utype, idx, cost)
+
         return result
 
-    def _call_llm(self, state: GameState, all_options: dict) -> _LLMDecision:
+    def _call_llm(self, state: GameState, all_options: dict) -> tuple[_LLMDecision, list]:
+        options_list = list(all_options.items())  # stable order for this call
+
+        system_content = """You are optimizing a Cookie Clicker game. Maximize CpS efficiently.
+
+                        Rules:
+                        - Building cost increases 15% each purchase (compounds)
+                        - Tier upgrades double ALL existing and future buildings of that type
+                        - Grandma synergies: buying a grandma type doubles ALL grandma CpS AND gives the linked building +X% CpS per grandma owned
+
+                        You will be shown current state and options. Choose: buy an item now, save up for one, or wait N ticks."""
+
         lines = [
+            f"Simulation: tick {self._tick} of {self.sim_length}",
             f"Cookies: {state.cookies:.0f}",
             f"CpS: {state.cps:.2f}",
-            "",
-            "Buildings owned:",
+            f"Buildings owned:",
         ]
         for i, (name, _, _) in enumerate(BUILDINGS):
             if state.owned[i] > 0:
                 lines.append(f"  {name}: {state.owned[i]}")
 
-        lines += ["", "Purchase options (AFFORDABLE marked):"]
-        for name, action in all_options.items():
-            delta = _cps_delta(state, action)
+        lines += ["", "Purchase options:"]
+        for i, (name, action) in enumerate(options_list):
             affordable = state.cookies >= action.cost
             tag = " [AFFORDABLE]" if affordable else f" (need {action.cost - state.cookies:.0f} more)"
-            lines.append(f"  {name}: cost={action.cost:.0f}, CpS gain={delta:.2f}{tag}")
+            lines.append(f"  {i}: {name}  cost={action.cost:.0f}{tag}")
 
         lines += [
             "",
             "Goal: Maximize CpS as efficiently as possible.",
-            "Choose: buy an affordable item, or wait (specify item name or number of ticks).",
+            "For buy_building/buy_upgrade: set target to the option index (e.g., '2'). Use this even if you cannot afford it yet — the engine will save up and buy it automatically.",
+            "For wait: only use this if you genuinely want to do nothing (e.g., no good option exists). Set target to ticks to wait.",
         ]
 
         response = self._client.beta.chat.completions.parse(
@@ -178,7 +217,7 @@ class LLMStrategy(Strategy):
             messages=[
                 {
                     "role": "system",
-                    "content": "You are optimizing a Cookie Clicker game. Make purchase decisions to maximize cookies per second efficiently.",
+                    "content": system_content,
                 },
                 {"role": "user", "content": "\n".join(lines)},
             ],
@@ -186,21 +225,25 @@ class LLMStrategy(Strategy):
         )
         self.llm_calls += 1
         dec = response.choices[0].message.parsed
-        print(f"  [LLM tick={self._tick} call={self.llm_calls}] {dec.action} -> {dec.target} | {dec.reasoning}")
-        return dec
+        name = options_list[int(dec.target)][0] if dec.target.isdigit() and int(dec.target) < len(options_list) else dec.target
+        print(f"  [LLM tick={self._tick} call={self.llm_calls}] {dec.action} -> {name} | {dec.reasoning}")
+        return dec, options_list
 
-    def _apply(self, decision: _LLMDecision, affordable: dict, all_options: dict):
+    def _apply(self, decision: _LLMDecision, affordable: dict, options_list: list):
         if decision.action in ("buy_building", "buy_upgrade"):
-            target = decision.target
-            if target in affordable:
-                self._pending_buy = affordable[target]
-            elif target in all_options:
-                self._wait_for = target  # not affordable yet; auto-buy when ready
+            target = decision.target.strip()
+            if target.isdigit():
+                idx = int(target)
+                if 0 <= idx < len(options_list):
+                    name, action = options_list[idx]
+                    if name in affordable:
+                        self._pending_buy = action
+                    else:
+                        self._wait_for = name
+                    self._wait_for_since = self._tick
         elif decision.action == "wait":
-            target = decision.target
+            target = decision.target.strip()
             if target.isdigit():
                 self._wait_until = self._tick + int(target)
-            elif target in all_options:
-                self._wait_for = target
             else:
                 self._wait_until = self._tick + 100  # fallback
