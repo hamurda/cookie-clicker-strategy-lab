@@ -1,7 +1,7 @@
 import time
 
 from engine import BUILDINGS, GameState, compute_building_cps, load_state, save_state
-from strategies import CheapestStrategy, GreedyROIStrategy, LLMStrategy, Strategy
+from strategies import CheapestStrategy, GreedyROIStrategy, LLMStrategy, Strategy, LLMPlannerStrategy
 
 
 def print_report(time_series, owned, tier_upgrades, grandma_synergy, total_baked, purchase_ticks, purchased_upgrades, llm_calls=None, elapsed=None):
@@ -93,5 +93,6 @@ def run_simulation(strategy: Strategy, ticks=1000, resume_from: str | None = Non
 
 
 if __name__ == "__main__":
-    # run_simulation(GreedyROIStrategy(), 20_000, "20k_greedy_roi.json", "40k_greedy_roi.json")
-    run_simulation(LLMStrategy(), 1_000, "35k_greedy_roi.json", "36k_llm.json")
+    # run_simulation(CheapestStrategy(), 5_000, "35k_greedy_roi.json", "40k_cheapest.json")
+    # run_simulation(GreedyROIStrategy(), 5_000, "35k_greedy_roi.json", "36k_greedy_roi.json")
+    run_simulation(LLMPlannerStrategy(sim_length=5000,plan_save_path="plan.json"), 5_000, "35k_greedy_roi.json", "40k_llm_planner_v2.json")
