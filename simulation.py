@@ -94,5 +94,5 @@ def run_simulation(strategy: Strategy, ticks=1000, resume_from: str | None = Non
 
 if __name__ == "__main__":
     # run_simulation(CheapestStrategy(), 5_000, "35k_greedy_roi.json", "40k_cheapest.json")
-    # run_simulation(GreedyROIStrategy(), 5_000, "35k_greedy_roi.json", "36k_greedy_roi.json")
-    run_simulation(LLMPlannerStrategy(sim_length=5000,plan_save_path="plan.json"), 5_000, "35k_greedy_roi.json", "40k_llm_planner_v2.json")
+    run_simulation(GreedyROIStrategy(), 5_000, "35k_greedy_roi.json",  "40_greedy_roi.json")
+    # run_simulation(LLMPlannerStrategy(sim_length=5000,plan_save_path="plan.json"), 5_000, "35k_greedy_roi.json", "40k_llm_planner_v2.json")
