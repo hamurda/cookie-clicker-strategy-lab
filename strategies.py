@@ -93,6 +93,7 @@ class LLMStrategy(Strategy):
         self._wait_until: int = -1               # tick at which wait expires (-1 = no timer)
         self._wait_for: str | None = None        # item name to auto-buy when affordable
         self._wait_for_since: int = 0            # tick when _wait_for was set
+        self._next_call_tick = self._tick
         self.llm_calls: int = 0
         self.sim_length = sim_length
 
@@ -104,6 +105,10 @@ class LLMStrategy(Strategy):
 
         all_options = self._all_options(state)
         affordable = {n: a for n, a in all_options.items() if state.cookies >= a.cost}
+
+        #Cool off period after each LLM call to avoid excessive calls when multiple options are affordable
+        if self._tick < self._next_call_tick:
+            return None
 
         # Complete a wait_for direction once the item is affordable
         if self._wait_for and self._wait_for in affordable:
@@ -133,6 +138,7 @@ class LLMStrategy(Strategy):
             return None
 
         decision, options_list = self._call_llm(state, all_options)
+        self._next_call_tick = self._tick + 100  # cool off period to avoid excessive calls
         self._apply(decision, affordable, options_list)
 
         # If the decision is immediately actionable, execute now
@@ -186,8 +192,13 @@ class LLMStrategy(Strategy):
                         - Building cost increases 15% each purchase (compounds)
                         - Tier upgrades double ALL existing and future buildings of that type
                         - Grandma synergies: buying a grandma type doubles ALL grandma CpS AND gives the linked building +X% CpS per grandma owned
+                        - You cannot buy another building for 100 ticks after a purchase (cool off period)
 
-                        You will be shown current state and options. Choose: buy an item now, save up for one, or wait N ticks."""
+                        You will be shown current state and options to buy. 
+                        You can choose: 
+                            1.buy an item now (building, upgrade or synergy) OR
+                            2.save up to buy an item OR
+                            3.wait N ticks"""
 
         lines = [
             f"Simulation: tick {self._tick} of {self.sim_length}",
@@ -196,14 +207,18 @@ class LLMStrategy(Strategy):
             f"Buildings owned:",
         ]
         for i, (name, _, _) in enumerate(BUILDINGS):
-            if state.owned[i] > 0:
-                lines.append(f"  {name}: {state.owned[i]}")
+            lines.append(f"  {name}: {state.owned[i]}")
 
         lines += ["", "Purchase options:"]
         for i, (name, action) in enumerate(options_list):
+            if action.kind in ("tier", "grandma_synergy"):
+                context = f" [doubles CpS of ALL {BUILDINGS[action.idx][0]}s you own ({state.owned[action.idx]})]"
+            else:
+                context = ""
+    
             affordable = state.cookies >= action.cost
             tag = " [AFFORDABLE]" if affordable else f" (need {action.cost - state.cookies:.0f} more)"
-            lines.append(f"  {i}: {name}  cost={action.cost:.0f}{tag}")
+            lines.append(f"  {i}: {name}  cost={action.cost:.0f}{context}{tag}")
 
         lines += [
             "",
