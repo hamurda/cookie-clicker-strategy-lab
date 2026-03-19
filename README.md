@@ -1,4 +1,4 @@
-# cookie-clicker-bot
+# cookie-clicker-strategy-lab
 
 A Cookie Clicker simulation engine in Python that compares three purchase strategies: Buy Cheapest (baseline), Greedy ROI (algorithmic), and LLM Planner (GPT-5-mini). All running from the same mid-game starting state for 5,000 ticks.
 
