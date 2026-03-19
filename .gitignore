@@ -4,3 +4,5 @@
 *.json
 
 __pycache__/
+
+strategies/_draft.py

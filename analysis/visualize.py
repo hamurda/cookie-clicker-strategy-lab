@@ -5,10 +5,9 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import numpy as np
 
-# ── Colors ────────────────────────────────────────────────────────────────────
-C_GREEDY  = "#2196F3"   # blue
-C_LLM     = "#FF9800"   # orange
-C_CHEAPEST = "#4CAF50"  # green
+C_GREEDY   = "#2196F3"
+C_LLM      = "#FF9800"
+C_CHEAPEST = "#4CAF50"
 
 BUILDING_COLORS = {
     "Cursor":       "#9E9E9E",
@@ -24,7 +23,6 @@ BUILDING_COLORS = {
 }
 UPGRADE_COLOR = "#F44336"
 
-# ── Time series ───────────────────────────────────────────────────────────────
 ts_greedy = [
     (100,7045123.15),(200,7045123.15),(300,7045123.15),(400,7045123.15),
     (500,7252216.48),(600,7252216.48),(700,7252216.48),(800,7252216.48),
@@ -73,7 +71,6 @@ ts_cheapest = [
     (4900,7559389.47),(5000,7573219.73),
 ]
 
-# ── Purchase histories ────────────────────────────────────────────────────────
 purchases_greedy = [
     (494,"buy_building","Wizard Tower"),(1197,"buy_building","Shipment"),
     (1400,"buy_building","Temple"),(1401,"buy_building","Cursor"),
@@ -180,25 +177,19 @@ purchases_cheapest = [
     (4926,"buy_building","Grandma"),
 ]
 
-# ── Building inventory ────────────────────────────────────────────────────────
 BUILDINGS = ["Cursor","Grandma","Farm","Mine","Factory","Bank","Temple","Wizard Tower","Shipment","Alchemy Lab"]
 
 inv_greedy   = [58, 110, 64, 58, 47, 41, 34, 21,  3, 0]
 inv_llm      = [64, 107, 67, 61, 54, 43, 32, 20,  2, 0]
 inv_cheapest = [129, 116, 98, 81, 64, 47, 31, 18, 0, 0]
+inv_start    = [55, 106, 61, 55, 44, 39, 31, 18, 0, 0]
 
-# starting inventory (from 35k_greedy_roi.json)
-inv_start = [55, 106, 61, 55, 44, 39, 31, 18, 0, 0]
-
-# delta = what each strategy added
 delta_greedy   = [inv_greedy[i]   - inv_start[i] for i in range(10)]
 delta_llm      = [inv_llm[i]      - inv_start[i] for i in range(10)]
 delta_cheapest = [inv_cheapest[i] - inv_start[i] for i in range(10)]
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # Chart 1: CpS over time
-# ═══════════════════════════════════════════════════════════════════════════════
 fig1, ax1 = plt.subplots(figsize=(12, 6))
 
 for ts, color, label in [
@@ -217,13 +208,11 @@ ax1.legend()
 ax1.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:.2f}M"))
 ax1.grid(axis="y", alpha=0.3)
 fig1.tight_layout()
-fig1.savefig("chart_cps_over_time.png", dpi=150)
-print("Saved chart_cps_over_time.png")
+fig1.savefig("results/chart_cps_over_time.png", dpi=150)
+print("Saved results/chart_cps_over_time.png")
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # Chart 2: Purchase timeline
-# ═══════════════════════════════════════════════════════════════════════════════
 fig2, axes = plt.subplots(3, 1, figsize=(14, 6), sharex=True)
 
 strategy_data = [
@@ -254,7 +243,6 @@ for purchases, strat_color, strat_label, ax in strategy_data:
 axes[2].set_xlabel("Tick (relative to game tick 35,000)")
 fig2.suptitle("Purchase Timeline — When Each Strategy Bought What", y=1.01)
 
-# Legend: building types + upgrade marker
 legend_handles = []
 for name, color in BUILDING_COLORS.items():
     legend_handles.append(mpatches.Patch(color=color, label=name))
@@ -264,13 +252,11 @@ fig2.legend(handles=legend_handles, loc="upper right", bbox_to_anchor=(1.13, 1.0
             fontsize=8, title="Purchase type", title_fontsize=8)
 
 fig2.tight_layout()
-fig2.savefig("chart_purchase_timeline.png", dpi=150, bbox_inches="tight")
-print("Saved chart_purchase_timeline.png")
+fig2.savefig("results/chart_purchase_timeline.png", dpi=150, bbox_inches="tight")
+print("Saved results/chart_purchase_timeline.png")
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # Chart 3: Final building inventory (delta from start)
-# ═══════════════════════════════════════════════════════════════════════════════
 fig3, ax3 = plt.subplots(figsize=(13, 6))
 
 x = np.arange(len(BUILDINGS))
@@ -288,7 +274,6 @@ ax3.set_xticklabels(BUILDINGS, rotation=20, ha="right")
 ax3.legend()
 ax3.grid(axis="y", alpha=0.3)
 
-# value labels on top of bars
 for bars in (bars_g, bars_l, bars_c):
     for bar in bars:
         h = bar.get_height()
@@ -297,5 +282,5 @@ for bars in (bars_g, bars_l, bars_c):
                      ha="center", va="bottom", fontsize=7)
 
 fig3.tight_layout()
-fig3.savefig("chart_building_inventory.png", dpi=150)
-print("Saved chart_building_inventory.png")
+fig3.savefig("results/chart_building_inventory.png", dpi=150)
+print("Saved results/chart_building_inventory.png")

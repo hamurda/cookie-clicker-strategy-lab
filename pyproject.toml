@@ -1,11 +1,12 @@
 [project]
 name = "cookie-clicker-bot"
 version = "0.1.0"
-description = "Add your description here"
+description = "Cookie Clicker simulation engine comparing Buy Cheapest, Greedy ROI, and LLM Planner strategies"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "dotenv>=0.9.9",
     "matplotlib>=3.10.8",
     "openai>=2.28.0",
+    "pydantic>=2.12.5",
 ]

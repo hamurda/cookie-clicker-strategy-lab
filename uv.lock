@@ -104,6 +104,7 @@ dependencies = [
     { name = "dotenv" },
     { name = "matplotlib" },
     { name = "openai" },
+    { name = "pydantic" },
 ]
 
 [package.metadata]
@@ -111,6 +112,7 @@ requires-dist = [
     { name = "dotenv", specifier = ">=0.9.9" },
     { name = "matplotlib", specifier = ">=3.10.8" },
     { name = "openai", specifier = ">=2.28.0" },
+    { name = "pydantic", specifier = ">=2.12.5" },
 ]
 
 [[package]]
