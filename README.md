@@ -27,10 +27,10 @@ uv run main.py visualize              # regenerate charts
 
 ## Strategies
  
-**Buy Cheapest** — baseline.
-**Greedy ROI** — picks the best payback every tick
-**LLM Planner** — plans 10 purchases ahead (GPT-5-mini)
-**Hybrid** — LLM planning + greedy fallback
+- **Buy Cheapest** — baseline.
+- **Greedy ROI** — picks the best payback every tick
+- **LLM Planner** — plans 10 purchases ahead (GPT-5-mini)
+- **Hybrid** — LLM planning + greedy fallback
 
 ## What I learned
 
