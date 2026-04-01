@@ -1,4 +1,4 @@
-"""Generate three comparison charts for the three cookie clicker strategies."""
+"""Generate comparison charts for the four cookie clicker strategies."""
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -8,6 +8,7 @@ import numpy as np
 C_GREEDY   = "#2196F3"
 C_LLM      = "#FF9800"
 C_CHEAPEST = "#4CAF50"
+C_HYBRID   = "#E91E63"
 
 BUILDING_COLORS = {
     "Cursor":       "#9E9E9E",
@@ -114,6 +115,57 @@ purchases_llm = [
     (3239,"buy_building","Shipment"),
 ]
 
+ts_hybrid = [
+    (100,7094876.19),(200,7094876.19),(300,7170896.35),(400,7182183.81),
+    (500,7330870.08),(600,7330870.08),(700,7330870.08),(800,7330870.08),
+    (900,7330870.08),(1000,7330870.08),(1100,7538256.75),(1200,7538256.75),
+    (1300,7538256.75),(1400,7538256.75),(1500,7538256.75),(1600,7538256.75),
+    (1700,7538256.75),(1800,7812032.32),(1900,7812032.32),(2000,7812032.32),
+    (2100,7812032.32),(2200,7812032.32),(2300,7812032.32),(2400,8019712.32),
+    (2500,8019712.32),(2600,8019712.32),(2700,8019712.32),(2800,8019712.32),
+    (2900,8019712.32),(3000,8019712.32),(3100,8279712.32),(3200,8279712.32),
+    (3300,8355590.72),(3400,8369782.83),(3500,8369782.83),(3600,8369782.83),
+    (3700,8369782.83),(3800,8369782.83),(3900,8369782.83),(4000,8577756.16),
+    (4100,8577756.16),(4200,8577756.16),(4300,8577756.16),(4400,8577756.16),
+    (4500,8577756.16),(4600,8577756.16),(4700,8577756.16),(4800,8837756.16),
+    (4900,8837756.16),(5000,8913760.96),
+]
+
+purchases_hybrid = purchases = [
+    (1,'buy_building','Bank'),
+    (2,'buy_building','Factory'),
+    (548,'buy_building','Wizard Tower'),
+    (1249,'buy_building','Shipment'),
+    (1258,'buy_building','Factory'),
+    (1269,'buy_building','Factory'),
+    (1281,'buy_building','Factory'),
+    (1296,'buy_building','Factory'),
+    (1312,'buy_building','Factory'),
+    (1398,'buy_upgrade','Factory tier 4'),
+    (1433,'buy_building','Grandma'),
+    (1631,'buy_building','Temple'),
+    (1632,'buy_building','Cursor'),
+    (1633,'buy_building','Farm'),
+    (1635,'buy_building','Mine'),
+    (1675,'buy_building','Grandma'),
+    (2278,'buy_building','Wizard Tower'),
+    (3012,'buy_building','Shipment'),
+    (3224,'buy_building','Temple'),
+    (3225,'buy_building','Cursor'),
+    (3226,'buy_building','Farm'),
+    (3242,'buy_building','Factory'),
+    (3285,'buy_building','Grandma'),
+    (3288,'buy_building','Mine'),
+    (3333,'buy_building','Bank'),
+    (3979,'buy_building','Wizard Tower'),
+    (4765,'buy_building','Shipment'),
+    (4993,'buy_building','Temple'),
+    (4994,'buy_building','Cursor'),
+    (4995,'buy_building','Farm'),
+]
+
+inv_hybrid = [58, 109, 67, 58, 51, 41, 34, 21, 3, 0]
+
 purchases_cheapest = [
     (1,"buy_building","Cursor"),(2,"buy_building","Cursor"),(3,"buy_building","Cursor"),
     (4,"buy_building","Cursor"),(5,"buy_building","Cursor"),(6,"buy_building","Cursor"),
@@ -187,6 +239,7 @@ inv_start    = [55, 106, 61, 55, 44, 39, 31, 18, 0, 0]
 delta_greedy   = [inv_greedy[i]   - inv_start[i] for i in range(10)]
 delta_llm      = [inv_llm[i]      - inv_start[i] for i in range(10)]
 delta_cheapest = [inv_cheapest[i] - inv_start[i] for i in range(10)]
+delta_hybrid   = [inv_hybrid[i]   - inv_start[i] for i in range(10)]
 
 
 # Chart 1: CpS over time
@@ -196,6 +249,7 @@ for ts, color, label in [
     (ts_greedy,   C_GREEDY,   "Greedy ROI"),
     (ts_llm,      C_LLM,      "LLM Planner"),
     (ts_cheapest, C_CHEAPEST, "Buy Cheapest"),
+    (ts_hybrid,   C_HYBRID,   "Hybrid"),
 ]:
     ticks = [t for t, _ in ts]
     cps   = [c / 1e6 for _, c in ts]
@@ -213,12 +267,13 @@ print("Saved results/chart_cps_over_time.png")
 
 
 # Chart 2: Purchase timeline
-fig2, axes = plt.subplots(3, 1, figsize=(14, 6), sharex=True)
+fig2, axes = plt.subplots(4, 1, figsize=(14, 8), sharex=True)
 
 strategy_data = [
     (purchases_greedy,   C_GREEDY,   "Greedy ROI",   axes[0]),
     (purchases_llm,      C_LLM,      "LLM Planner",  axes[1]),
     (purchases_cheapest, C_CHEAPEST, "Buy Cheapest",  axes[2]),
+    (purchases_hybrid,   C_HYBRID,   "Hybrid",        axes[3]),
 ]
 
 for purchases, strat_color, strat_label, ax in strategy_data:
@@ -240,7 +295,7 @@ for purchases, strat_color, strat_label, ax in strategy_data:
     ax.axhline(0, color="#cccccc", linewidth=0.8, zorder=1)
     ax.grid(axis="x", alpha=0.2)
 
-axes[2].set_xlabel("Tick (relative to game tick 35,000)")
+axes[3].set_xlabel("Tick (relative to game tick 35,000)")
 fig2.suptitle("Purchase Timeline — When Each Strategy Bought What", y=1.01)
 
 legend_handles = []
@@ -260,11 +315,12 @@ print("Saved results/chart_purchase_timeline.png")
 fig3, ax3 = plt.subplots(figsize=(13, 6))
 
 x = np.arange(len(BUILDINGS))
-width = 0.25
+width = 0.2
 
-bars_g = ax3.bar(x - width, delta_greedy,   width, label="Greedy ROI",  color=C_GREEDY)
-bars_l = ax3.bar(x,          delta_llm,      width, label="LLM Planner", color=C_LLM)
-bars_c = ax3.bar(x + width,  delta_cheapest, width, label="Buy Cheapest", color=C_CHEAPEST)
+bars_g = ax3.bar(x - 1.5*width, delta_greedy,   width, label="Greedy ROI",  color=C_GREEDY)
+bars_l = ax3.bar(x - 0.5*width, delta_llm,      width, label="LLM Planner", color=C_LLM)
+bars_c = ax3.bar(x + 0.5*width, delta_cheapest, width, label="Buy Cheapest", color=C_CHEAPEST)
+bars_h = ax3.bar(x + 1.5*width, delta_hybrid,   width, label="Hybrid",       color=C_HYBRID)
 
 ax3.set_xlabel("Building type")
 ax3.set_ylabel("Buildings purchased during run")
@@ -274,7 +330,7 @@ ax3.set_xticklabels(BUILDINGS, rotation=20, ha="right")
 ax3.legend()
 ax3.grid(axis="y", alpha=0.3)
 
-for bars in (bars_g, bars_l, bars_c):
+for bars in (bars_g, bars_l, bars_c, bars_h):
     for bar in bars:
         h = bar.get_height()
         if h > 0:

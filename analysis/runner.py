@@ -6,7 +6,7 @@ from game.models import GameState
 from strategies.base import Strategy
 
 
-def print_report(time_series, owned, tier_upgrades, grandma_synergy, total_baked, purchase_ticks, purchased_upgrades, llm_calls=None, elapsed=None):
+def print_report(time_series, owned, tier_upgrades, grandma_synergy, total_baked, purchase_ticks, purchase_events, purchased_upgrades, llm_calls=None, elapsed=None):
     print("\n--- Time Series (every 100 ticks) ---")
     print(f"{'Tick':>6} | {'CpS':>12} | {'Bank':>14} | {'Total Baked':>16}")
     print("-" * 58)
@@ -31,6 +31,11 @@ def print_report(time_series, owned, tier_upgrades, grandma_synergy, total_baked
         print("\nUpgrades purchased:")
         for u in purchased_upgrades:
             print(f"  {u}")
+    print("\nPurchase events (paste into visualize.py):")
+    print("purchases = [")
+    for tick, kind, name in purchase_events:
+        print(f"    ({tick},{repr(kind)},{repr(name)}),")
+    print("]")
     print("\nBuildings owned & CpS share:")
     for i, (name, _, _) in enumerate(BUILDINGS):
         pct = (contribs[i] / final_cps * 100) if final_cps > 0 else 0.0
@@ -56,6 +61,7 @@ def run_simulation(strategy: Strategy, ticks=1000, resume_from: str | None = Non
     start = time.time()
     time_series = []
     purchase_ticks = []
+    purchase_events = []  # (tick, "buy_building"/"buy_upgrade", name)
     purchased_upgrades = []
 
     for tick in range(1, ticks + 1):
@@ -69,12 +75,15 @@ def run_simulation(strategy: Strategy, ticks=1000, resume_from: str | None = Non
             cookies -= action.cost
             if action.kind == "building":
                 owned[action.idx] += 1
+                purchase_events.append((tick, "buy_building", action.name))
             elif action.kind == "tier":
                 tier_upgrades[action.idx] += 1
                 purchased_upgrades.append(action.name)
+                purchase_events.append((tick, "buy_upgrade", action.name))
             elif action.kind == "grandma_synergy":
                 grandma_synergy[action.idx] = True
                 purchased_upgrades.append(action.name)
+                purchase_events.append((tick, "buy_upgrade", action.name))
             purchase_ticks.append(tick)
 
         if tick % 100 == 0:
@@ -87,7 +96,7 @@ def run_simulation(strategy: Strategy, ticks=1000, resume_from: str | None = Non
 
     elapsed = time.time() - start
     llm_calls = getattr(strategy, "llm_calls", None)
-    print_report(time_series, owned, tier_upgrades, grandma_synergy, total_baked, purchase_ticks, purchased_upgrades, llm_calls, elapsed)
+    print_report(time_series, owned, tier_upgrades, grandma_synergy, total_baked, purchase_ticks, purchase_events, purchased_upgrades, llm_calls, elapsed)
     if save_to:
         _, cps = compute_building_cps(owned, tier_upgrades, grandma_synergy)
         save_state(GameState(cookies, owned, tier_upgrades, grandma_synergy, cps, total_baked), save_to)

@@ -3,12 +3,14 @@ import argparse
 from analysis.runner import run_simulation
 from strategies.cheapest import CheapestStrategy
 from strategies.greedy_roi import GreedyROIStrategy
+from strategies.hybrid import HybridStrategy
 from strategies.llm_planner import LLMPlannerStrategy
 
 STRATEGIES = {
     "cheapest": lambda ticks: CheapestStrategy(),
     "greedy":   lambda ticks: GreedyROIStrategy(),
     "llm":      lambda ticks: LLMPlannerStrategy(sim_length=ticks, plan_save_path="results/plan.json"),
+    "hybrid":   lambda ticks: HybridStrategy(sim_length=ticks, plan_save_path="results/plan_hybrid.json"),
 }
 
 parser = argparse.ArgumentParser(description="Cookie Clicker simulation")
