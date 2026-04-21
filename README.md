@@ -45,3 +45,7 @@ The LLM adds value by spotting **threshold plays** (e.g. pushing to unlock doubl
 - Hybrid improvement is small (~1.6%) but consistent
 - Only ~2 LLM calls needed per run
 - Greedy algorithm's performance depends on how much future value is visible in `_cps_delta()`
+
+## Articles 
+- [I Let LLM Play Cookie Clicker](https://dev.to/hamurda/i-let-an-llm-play-cookie-clicker-then-i-fixed-its-biggest-weakness-43o)
+- [What Cookie Clicker Taught Me About AI-Assisted Development](https://dev.to/hamurda/what-cookie-clicker-taught-me-about-ai-assisted-development-3o25)
